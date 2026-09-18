@@ -58,7 +58,13 @@ export {
   type Candidate,
 } from "./taxonomies.ts";
 
-export { PROBABILITY_SUM_TOLERANCE, rankLabels, validateAnswer } from "./validate.ts";
+export {
+  PROBABILITY_SUM_TOLERANCE_FLOOR,
+  PROBABILITY_SUM_TOLERANCE_PER_CANDIDATE,
+  rankLabels,
+  sumToleranceFor,
+  validateAnswer,
+} from "./validate.ts";
 
 export { resetClientCache } from "./client.ts";
 

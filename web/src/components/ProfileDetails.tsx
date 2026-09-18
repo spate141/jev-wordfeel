@@ -11,7 +11,7 @@ export function ProfileDetails({ profile, onHighlight }: ProfileDetailsProps) {
     <details className="profile-details">
       <summary>See profile</summary>
       <div className="profile-list">
-        {profile.items.map((item) => (
+        {profile.ranked.map((item) => (
           <button
             className="profile-row"
             type="button"

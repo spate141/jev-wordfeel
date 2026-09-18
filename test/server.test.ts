@@ -4,27 +4,33 @@ import { once } from "node:events";
 import test from "node:test";
 
 import { createRequestHandler, type CoreAdapter } from "../server/app.ts";
+import { PROMPT_VERSION, SCHEMA_VERSION, TAXONOMY_VERSION } from "../src/prompts.ts";
+import { labelsFor } from "../src/taxonomies.ts";
 import type { AnalysisResult, Facet, FacetResult } from "../src/types.ts";
 
-const success = {
-  status: "ok",
-  model: "jev-test",
-  choice: "sweet",
-  probabilities: { sweet: 1, sour: 0, salty: 0, bitter: 0, umami: 0, no_association: 0 },
-  confidence: 1,
-  ranked: [
-    { label: "sweet", probability: 1 }, { label: "sour", probability: 0 },
-    { label: "salty", probability: 0 }, { label: "bitter", probability: 0 },
-    { label: "umami", probability: 0 }, { label: "no_association", probability: 0 },
-  ],
-  latency_ms: 1,
-  usage: null,
-} as const;
+/** One successful facet, built from the live palette so these fixtures cannot go stale. */
+const facetSuccess = (facet: Facet, choice: string) => {
+  const labels = labelsFor(facet) as readonly string[];
+  return {
+    status: "ok",
+    model: "jev-test",
+    choice,
+    probabilities: Object.fromEntries(labels.map((label) => [label, label === choice ? 1 : 0])),
+    confidence: 1,
+    ranked: labels
+      .map((label) => ({ label, probability: label === choice ? 1 : 0 }))
+      .sort((left, right) => right.probability - left.probability),
+    latency_ms: 1,
+    usage: null,
+  } as const;
+};
+
+const success = facetSuccess("taste", "sweet");
 
 const analysis = {
-  schema_version: "1.0.0",
-  prompt_version: "1.0.0",
-  taxonomy_version: "1.0.0",
+  schema_version: SCHEMA_VERSION,
+  prompt_version: PROMPT_VERSION,
+  taxonomy_version: TAXONOMY_VERSION,
   input: "banana",
   normalized_input: "banana",
   requested_model: "jev-test",
@@ -32,9 +38,9 @@ const analysis = {
   total_latency_ms: 2,
   facets: {
     taste: success,
-    material: { ...success, choice: "wood", probabilities: { glass: 0, metal: 0, wood: 1, stone: 0, fabric: 0, water: 0, smoke: 0, rubber: 0, no_association: 0 }, ranked: [{ label: "wood", probability: 1 }] },
-    smell: { ...success, choice: "citrus", probabilities: { floral: 0, citrus: 1, woody: 0, earthy: 0, smoky: 0, herbal: 0, spicy: 0, oceanic: 0, no_association: 0 }, ranked: [{ label: "citrus", probability: 1 }] },
-    shape: { ...success, choice: "circle", probabilities: { circle: 1, triangle: 0, square: 0, star: 0, spiral: 0, wave: 0, no_association: 0 }, ranked: [{ label: "circle", probability: 1 }] },
+    material: facetSuccess("material", "wood"),
+    smell: facetSuccess("smell", "citrus"),
+    shape: facetSuccess("shape", "circle"),
   },
 } as unknown as AnalysisResult;
 

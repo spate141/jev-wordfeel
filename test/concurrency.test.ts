@@ -121,9 +121,25 @@ test("user text reaches the model only as state, never inside instructions or cr
   }
 });
 
-test("candidate counts match the v1 contract", () => {
-  assert.equal(labelsFor("taste").length, 6);
-  assert.equal(labelsFor("material").length, 9);
-  assert.equal(labelsFor("smell").length, 9);
-  assert.equal(labelsFor("shape").length, 7);
+test("candidate counts match the v2 contract", () => {
+  assert.equal(labelsFor("taste").length, 21);
+  assert.equal(labelsFor("material").length, 23);
+  assert.equal(labelsFor("smell").length, 21);
+  assert.equal(labelsFor("shape").length, 21);
+});
+
+test("every candidate is sent as a structured criterion with an exclusion", () => {
+  for (const facet of FACETS) {
+    for (const [label, criterion] of Object.entries(criteriaFor(facet))) {
+      assert.equal(typeof criterion, "object", `${facet}/${label} should send a structured criterion`);
+      const fields = criterion as Record<string, unknown>;
+      assert.equal(typeof fields["what"], "string");
+      assert.equal(
+        typeof fields["not_for"],
+        "string",
+        `${facet}/${label} should say what it is not for`,
+      );
+      assert.ok(Array.isArray(fields["examples"]) && fields["examples"].length > 0);
+    }
+  }
 });

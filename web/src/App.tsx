@@ -5,6 +5,7 @@ import type { FacetFailure, FacetSuccess } from "../../src/types.ts";
 import { wordfeelIconUrl } from "./assets.ts";
 import { Postcard, downloadPostcard } from "./components/Postcard.tsx";
 import { SensePanel } from "./components/SensePanel.tsx";
+import { SiteCredit } from "./components/SiteCredit.tsx";
 import { UnderTheHood } from "./components/UnderTheHood.tsx";
 import { WordInput } from "./components/WordInput.tsx";
 import { useWordAnalysis } from "./useWordAnalysis.ts";
@@ -85,8 +86,11 @@ export function App() {
       </main>
 
       <footer>
-        <p>A playful interpretation by Jev.</p>
-        <p>Associations are subjective; probabilities describe the model’s choice among each fixed palette.</p>
+        <div className="footer-note">
+          <p>A playful interpretation by Jev.</p>
+          <p>Associations are subjective; probabilities describe the model’s choice among each fixed palette.</p>
+        </div>
+        <SiteCredit />
       </footer>
     </div>
   );

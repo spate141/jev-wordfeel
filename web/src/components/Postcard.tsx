@@ -22,6 +22,10 @@ export const Postcard = forwardRef<SVGSVGElement, { readonly result: AnalysisRes
         <text x="92" y="190" fill="#292d28" fontFamily="Georgia, serif" fontSize="76">{result.normalized_input}</text>
         <text x="92" y="238" fill="#62685e" fontFamily="Arial, sans-serif" fontSize="24">A playful interpretation by Jev.</text>
         {FACETS.map((facet, index) => <PostcardPanel key={facet} facet={facet} index={index} result={result} />)}
+        {/* The saved file travels on its own, so it carries the byline the site footer shows. */}
+        <text x="92" y="946" fill="#62685e" fontFamily="Arial, sans-serif" fontSize="18">
+          Made by <tspan fontWeight="700" fill="#292d28">Snehal Patel</tspan> · https://snehal.ai/
+        </text>
         <text x="1508" y="946" textAnchor="end" fill="#777c73" fontFamily="Arial, sans-serif" fontSize="18">wordfeel · taste it, touch it, smell it, see it</text>
       </svg>
     );

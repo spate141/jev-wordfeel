@@ -12,12 +12,31 @@ import { displayIndexOf, labelsFor, TAXONOMIES, type Facet, type LabelOf } from 
 import type { RankedLabel } from "./types.ts";
 
 /**
- * Allowed deviation of the probability sum from 1.
+ * Allowed deviation of the probability sum from 1, per candidate in the facet's palette.
  *
  * Floating-point distributions do not sum to exactly 1, so an exact check would reject valid
- * answers. This tolerance is tight enough that a genuinely malformed distribution still fails.
+ * answers. The provider also reports each probability rounded to about two decimals, and that
+ * rounding error accumulates once per candidate: a v1 palette of six or seven labels almost
+ * never drifted past 1e-4, but a v2 palette of twenty-three routinely lands a full quantization
+ * step away — a live `material` answer summing to 0.99 is what prompted this.
+ *
+ * So the budget scales with the palette rather than being a single constant. At 0.002 per
+ * candidate it is roughly four quantization steps for the largest facet, which absorbs the
+ * rounding while still rejecting a distribution that is genuinely malformed. Nothing here
+ * repairs a response: an answer inside the tolerance is passed through with its own numbers,
+ * drift included.
  */
-export const PROBABILITY_SUM_TOLERANCE = 1e-4;
+export const PROBABILITY_SUM_TOLERANCE_PER_CANDIDATE = 0.002;
+
+/** The floor, for a hypothetical palette small enough that rounding cannot accumulate. */
+export const PROBABILITY_SUM_TOLERANCE_FLOOR = 1e-4;
+
+/** Allowed deviation of the probability sum from 1 for one facet. */
+export const sumToleranceFor = (facet: Facet): number =>
+  Math.max(
+    PROBABILITY_SUM_TOLERANCE_FLOOR,
+    labelsFor(facet).length * PROBABILITY_SUM_TOLERANCE_PER_CANDIDATE,
+  );
 
 /** Slack when comparing a probability to the maximum, so a numeric tie is treated as a tie. */
 const TIE_EPSILON = 1e-9;
@@ -92,10 +111,11 @@ export const validateAnswer = <F extends Facet>(facet: F, answer: unknown): Vali
   }
 
   const sum = expected.reduce((total, label) => total + (probabilities[label] as number), 0);
-  if (Math.abs(sum - 1) > PROBABILITY_SUM_TOLERANCE) {
+  const tolerance = sumToleranceFor(facet);
+  if (Math.abs(sum - 1) > tolerance) {
     throw new InvalidResponseError(
       `Facet "${facet}" returned probabilities summing to ${sum}, outside the tolerance of ` +
-        `${PROBABILITY_SUM_TOLERANCE} around 1.`,
+        `${tolerance} around 1.`,
     );
   }
 

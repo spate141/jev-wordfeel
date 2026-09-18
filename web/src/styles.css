@@ -104,9 +104,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 .raw-result pre { max-height: 300px; overflow: auto; padding: 12px; border-radius: 8px; background: #292d28; color: #edf0e9; font-size: 11px; white-space: pre-wrap; word-break: break-word; }
 .postcard-source { position: fixed; left: -10000px; top: 0; pointer-events: none; }
 
-footer { display: flex; justify-content: space-between; gap: 30px; padding: 27px 0 38px; border-top: 1px solid var(--line); color: #7a7f76; font-size: 11px; line-height: 1.45; }
+footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px 30px; padding: 24px 0 34px; border-top: 1px solid var(--line); color: #7a7f76; font-size: 11px; line-height: 1.45; }
+.footer-note { max-width: 560px; }
 footer p { margin: 0; }
-footer p:last-child { max-width: 470px; text-align: right; }
+.footer-note p + p { margin-top: 4px; }
+
+.snehal-footer { font-size: 13px; line-height: 1.4; }
+.snehal-footer__inner { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.snehal-footer__brand { display: flex; align-items: baseline; gap: 8px; }
+.snehal-footer__name { color: var(--ink); font-weight: 600; text-decoration: none; }
+.snehal-footer__name:hover { color: var(--terracotta); }
+.snehal-footer__tagline { color: var(--muted); font-size: 12px; }
+.snehal-footer__social { display: flex; align-items: center; gap: 12px; }
+.snehal-footer__social a { display: inline-flex; color: var(--muted); transition: color .15s; }
+.snehal-footer__social a:hover { color: var(--terracotta); }
+.snehal-footer__emoji { font-size: 17px; line-height: 1; }
 
 @media (max-width: 959px) {
   .site-shell { width: min(760px, calc(100% - 40px)); }
@@ -150,8 +162,10 @@ footer p:last-child { max-width: 470px; text-align: right; }
   .under-hood { margin-top: 16px; }
   .under-grid { grid-template-columns: 1fr; gap: 2px; }
   .under-grid strong { margin-bottom: 8px; text-align: left; }
-  footer { display: block; text-align: center; }
-  footer p:last-child { margin: 8px auto 0; text-align: center; }
+  footer { flex-direction: column; text-align: center; gap: 16px; }
+  .footer-note { margin: 0 auto; }
+  .snehal-footer__inner { flex-direction: column; gap: 6px; }
+  .snehal-footer__brand { flex-direction: column; align-items: center; gap: 2px; }
 }
 
 @media (max-width: 359px) {

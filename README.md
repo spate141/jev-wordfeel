@@ -148,11 +148,20 @@ dependency is `@typesafe-ai/sdk`.
 Four fixed palettes. These are curated demo vocabularies, not exhaustive scientific classifications, and the
 IDs are part of the public contract. `taxonomy_version` is bumped when any ID or definition changes meaning.
 
-- **Taste** (6): `sweet`, `sour`, `salty`, `bitter`, `umami`, `no_association`.
-  Heat, temperature, texture, and aroma are deliberately outside this palette.
-- **Material** (9): `glass`, `metal`, `wood`, `stone`, `fabric`, `water`, `smoke`, `rubber`, `no_association`.
-- **Smell** (9): `floral`, `citrus`, `woody`, `earthy`, `smoky`, `herbal`, `spicy`, `oceanic`, `no_association`.
-- **Shape** (7): `circle`, `triangle`, `square`, `star`, `spiral`, `wave`, `no_association`.
+Each label is sent to the model as a structured criterion — what it covers, what it is *not* for, and a few
+examples — rather than a bare sentence. Several labels in each palette are deliberate near-neighbours, and
+the exclusions are what keeps them apart.
+
+- **Taste** (21): `sweet`, `sour`, `salty`, `bitter`, `umami`, `fatty`, `astringent`, `metallic`, `mineral`, `pungent`, `cooling`, `effervescent`, `fermented`, `caramelized`, `nutty`, `green`, `medicinal`, `bland`, `smoky`, `cloying`, `no_association`.
+  Flavor in the mouth, including sensations that arrive with it: burning heat, cooling tingle, fizz.
+  Aroma on its own belongs to the smell palette.
+- **Material** (23): `glass`, `metal`, `wood`, `stone`, `fabric`, `water`, `smoke`, `rubber`, `paper`, `clay`, `ice`, `leather`, `plastic`, `sand`, `crystal`, `wax`, `bone`, `moss`, `concrete`, `foam`, `ash`, `amber`, `no_association`.
+- **Smell** (21): `floral`, `citrus`, `woody`, `earthy`, `smoky`, `herbal`, `spicy`, `oceanic`, `gourmand`, `musky`, `ozonic`, `chemical`, `animalic`, `dusty`, `resinous`, `fruity`, `minty`, `fermented`, `metallic`, `putrid`, `no_association`.
+- **Shape** (21): `circle`, `triangle`, `square`, `star`, `spiral`, `wave`, `line`, `arc`, `ring`, `crescent`, `hexagon`, `diamond`, `cross`, `zigzag`, `grid`, `burst`, `knot`, `branch`, `cloud`, `shard`, `no_association`.
+
+Probabilities come back as the model reported them. Nothing is renormalized, smoothed, or rounded. The sum
+is required to be near 1 within a tolerance that scales with the palette — the provider rounds each value, and
+that error accumulates once per candidate — and an answer inside that tolerance keeps its own drift.
 
 `no_association` is in every palette so an uninterpretable or unsuitable input has an explicit outcome. Its
 probability stays in the returned distribution; it is never hidden and the other labels are never

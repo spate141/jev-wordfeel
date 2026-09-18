@@ -1,3 +1,4 @@
+import { PROMPT_VERSION, SCHEMA_VERSION, TAXONOMY_VERSION } from "../../src/prompts.ts";
 import { FACETS, labelsFor, type Facet, type LabelOf } from "../../src/taxonomies.ts";
 import type { AnalysisResult, FacetResults, FacetSuccess } from "../../src/types.ts";
 
@@ -22,9 +23,9 @@ export const makeSuccess = <F extends Facet>(
 };
 
 export const makeAnalysis = (input = "banana"): AnalysisResult => ({
-  schema_version: "1.0.0",
-  prompt_version: "1.0.0",
-  taxonomy_version: "1.0.0",
+  schema_version: SCHEMA_VERSION,
+  prompt_version: PROMPT_VERSION,
+  taxonomy_version: TAXONOMY_VERSION,
   input,
   normalized_input: input,
   requested_model: "jev-latest",

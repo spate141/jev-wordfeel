@@ -92,8 +92,8 @@ export type AnalysisStatus = "ok" | "partial" | "error";
 /** The full result of one `analyzeWord` call. */
 export interface AnalysisResult {
   readonly schema_version: "1.0.0";
-  readonly prompt_version: "1.0.0";
-  readonly taxonomy_version: "1.0.0";
+  readonly prompt_version: "2.0.0";
+  readonly taxonomy_version: "2.0.0";
   /** Exactly what the caller passed. */
   readonly input: string;
   /** NFC-normalized, trimmed, whitespace-collapsed. */

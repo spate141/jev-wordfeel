@@ -12,7 +12,7 @@ import { analyzeFacet, analyzeWord } from "../src/analyze.ts";
 import { resetClientCache } from "../src/client.ts";
 import { InvalidResponseError } from "../src/errors.ts";
 import { labelsFor } from "../src/taxonomies.ts";
-import { PROBABILITY_SUM_TOLERANCE, rankLabels, validateAnswer } from "../src/validate.ts";
+import { rankLabels, sumToleranceFor, validateAnswer } from "../src/validate.ts";
 import { createFakeProvider, fakeOptions, wellFormedAnswer } from "./fake-provider.ts";
 
 afterEach(() => resetClientCache());
@@ -33,20 +33,19 @@ const evenShape = (): Record<string, number> => {
 };
 
 test("a valid answer passes and its values are returned unchanged", () => {
+  // Two long decimals carry the point of the case; the rest of the palette shares what is left.
+  const named = { circle: 0.376543211, no_association: 0.123456789 };
+  const filler = (labelsFor("shape") as readonly string[]).filter((label) => !(label in named));
+  const share = (1 - named.circle - named.no_association) / filler.length;
   const probabilities = {
-    circle: 0.376543211,
-    triangle: 0.1,
-    square: 0.1,
-    star: 0.1,
-    spiral: 0.1,
-    wave: 0.1,
-    no_association: 0.123456789,
+    ...Object.fromEntries(filler.map((label) => [label, share])),
+    ...named,
   };
   const validated = validateAnswer("shape", shapeAnswer(probabilities));
 
   assert.equal(validated.probabilities.circle, 0.376543211);
   assert.equal(validated.probabilities.no_association, 0.123456789);
-  assert.deepEqual({ ...validated.probabilities }, probabilities);
+  assert.deepEqual({ ...validated.probabilities }, { ...probabilities });
   assert.equal(validated.confidence, 0.9);
 });
 
@@ -84,6 +83,25 @@ test("an out-of-range confidence is rejected", () => {
   );
 });
 
+test("the sum tolerance scales with the palette, because rounding accumulates per candidate", () => {
+  // The provider rounds each probability, so a 23-label palette can drift where a 7-label one
+  // could not. A real `material` answer summing to 0.99 is what this budget is sized for.
+  assert.ok(sumToleranceFor("material") > sumToleranceFor("shape"));
+  assert.ok(sumToleranceFor("material") > 0.01, "one quantization step must fit inside it");
+
+  const labels = labelsFor("material") as readonly string[];
+  const short = Object.fromEntries(labels.map((label) => [label, 0]));
+  short["wood"] = 0.99;
+  assert.doesNotThrow(() =>
+    validateAnswer("material", { type: "choice", choice: "wood", confidence: 0.9, probabilities: short }),
+  );
+  // The near-miss is accepted, not corrected: the 0.99 comes back as 0.99.
+  const validated = validateAnswer("material", {
+    type: "choice", choice: "wood", confidence: 0.9, probabilities: short,
+  });
+  assert.equal(validated.probabilities.wood, 0.99);
+});
+
 test("a sum outside the documented tolerance is rejected, and one inside it is accepted", () => {
   const labels = labelsFor("shape") as readonly string[];
 
@@ -92,19 +110,19 @@ test("a sum outside the documented tolerance is rejected, and one inside it is a
 
   // Just inside 1e-4: accepted, and the drift is preserved rather than normalized away.
   const nearlyOne = { ...evenShape() };
-  nearlyOne["circle"] = nearlyOne["circle"]! + PROBABILITY_SUM_TOLERANCE / 2;
+  nearlyOne["circle"] = nearlyOne["circle"]! + sumToleranceFor("shape") / 2;
   const validated = validateAnswer("shape", shapeAnswer(nearlyOne));
   assert.equal(validated.probabilities.circle, nearlyOne["circle"]);
 
   // Just outside it: rejected.
   const tooFar = { ...evenShape() };
-  tooFar["circle"] = tooFar["circle"]! + PROBABILITY_SUM_TOLERANCE * 10;
+  tooFar["circle"] = tooFar["circle"]! + sumToleranceFor("shape") * 10;
   assert.throws(() => validateAnswer("shape", shapeAnswer(tooFar)), InvalidResponseError);
 });
 
 test("a choice outside the taxonomy is rejected", () => {
   assert.throws(
-    () => validateAnswer("shape", shapeAnswer(evenShape(), { choice: "hexagon" })),
+    () => validateAnswer("shape", shapeAnswer(evenShape(), { choice: "dodecahedron" })),
     InvalidResponseError,
   );
 });
@@ -139,7 +157,7 @@ test("a non-choice answer type is rejected", () => {
 
 test("ties rank by taxonomy display order", () => {
   const probabilities = Object.fromEntries(
-    (labelsFor("shape") as readonly string[]).map((label) => [label, 1 / 7]),
+    (labelsFor("shape") as readonly string[]).map((label) => [label, 1 / labelsFor("shape").length]),
   ) as Record<string, number>;
 
   const ranked = rankLabels("shape", probabilities as never);
@@ -152,21 +170,20 @@ test("ties rank by taxonomy display order", () => {
 });
 
 test("ranking is descending and ties within it fall back to display order", () => {
+  const scored = { triangle: 0.3, square: 0.3, wave: 0.3, circle: 0.1 };
+  const rest = (labelsFor("shape") as readonly string[]).filter((label) => !(label in scored));
   const probabilities = {
-    circle: 0.1,
-    triangle: 0.3,
-    square: 0.3,
-    star: 0.0,
-    spiral: 0.0,
-    wave: 0.3,
-    no_association: 0.0,
+    ...Object.fromEntries(rest.map((label) => [label, 0])),
+    ...scored,
   };
 
   const ranked = rankLabels("shape", probabilities as never);
 
+  // The three tied leaders come back in taxonomy order, then the lone 0.1, then every zero in
+  // taxonomy order behind them.
   assert.deepEqual(
     ranked.map((entry) => entry.label),
-    ["triangle", "square", "wave", "circle", "star", "spiral", "no_association"],
+    ["triangle", "square", "wave", "circle", ...rest],
   );
 });
 
@@ -187,7 +204,7 @@ test("zero-valued candidates and no_association survive into the result", async 
 
   assert.deepEqual(Object.keys(outcome.probabilities), [...labelsFor("shape")]);
   assert.equal(outcome.probabilities.no_association, 0);
-  assert.equal(outcome.ranked.length, 7);
+  assert.equal(outcome.ranked.length, labelsFor("shape").length);
   assert.ok(outcome.ranked.some((entry) => entry.label === "no_association"));
 });
 
@@ -256,8 +273,8 @@ test("the result envelope reports versions, both inputs, and the requested model
   const result = await analyzeWord("  Chicago  ", fakeOptions(provider));
 
   assert.equal(result.schema_version, "1.0.0");
-  assert.equal(result.prompt_version, "1.0.0");
-  assert.equal(result.taxonomy_version, "1.0.0");
+  assert.equal(result.prompt_version, "2.0.0");
+  assert.equal(result.taxonomy_version, "2.0.0");
   assert.equal(result.input, "  Chicago  ");
   assert.equal(result.normalized_input, "Chicago");
   assert.equal(result.requested_model, "jev-test");
