@@ -14,7 +14,8 @@ Each profile is a full probability distribution over a fixed palette, not a sing
 interpretation of language, not a measurement. A material profile that spreads across glass and smoke is an
 association, not a chemical analysis.
 
-This repository is the reusable core and CLI. A visual demo will be built on top of it later.
+This repository includes the reusable core and CLI plus a visual React demo: a small sensory cabinet of
+code-generated specimens driven by the model's real probability distributions.
 
 ## Setup
 
@@ -42,6 +43,35 @@ it never appears in a result or an error message. Do not ship it to a browser.
 `JEV_TIMEOUT_MS` is this application's setting, mapped onto the SDK's per-request timeout. `TYPESAFE_MODEL` is
 likewise ours, mapped onto the SDK's `defaultModel`. (The SDK's own variable is `TYPESAFE_DEFAULT_MODEL`;
 wordfeel does not read it, so the name in `.env.example` is the name that takes effect.)
+
+## Web app
+
+Run the single-origin development server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). The Node server mounts Vite in middleware mode during
+development, so the browser and `/api` routes share one origin. A submit calls `POST /api/analyze`; retrying a
+failed panel calls `POST /api/analyze-facet` and does not rerun the other senses.
+
+For a production-style local run:
+
+```bash
+npm run build:app
+npm start
+```
+
+The production server serves `web/dist`, caching hashed assets while keeping the HTML uncached. API request
+bodies are capped at 4 KiB. By default, the adapter allows 30 API requests per source IP per minute and four
+concurrent API operations. These in-memory limits are intended for a small single-process demo and reset on
+restart. Configure them with `WORDFEEL_RATE_LIMIT_PER_MINUTE` and `WORDFEEL_MAX_CONCURRENT`; set
+`WORDFEEL_TRUST_PROXY=true` only behind a trusted reverse proxy.
+
+The four illustrations are inline SVG and support every v1 taxonomy label. Exact values remain available in
+each panel's profile, while animation respects the browser's reduced-motion preference. **Save image** exports
+the displayed result as a self-contained light-theme SVG postcard without making another model request.
 
 ### The TypeSafe skill
 
@@ -204,6 +234,9 @@ already completed keep their results.
 npm run typecheck    # tsc --noEmit
 npm test             # node --test
 npm run build        # emit dist/ for publishing
+npm run test:ui      # Vitest + Testing Library
+npm run test:e2e     # Playwright viewport/accessibility checks
+npm run verify       # core + UI tests, type checks, and both builds
 ```
 
 The test suite is deterministic and makes no network calls. It drives the real client over a fake `fetch`
@@ -226,7 +259,6 @@ the prompts and taxonomies are not tuned toward any example word.
 
 ## Scope
 
-This repository is the core. It intentionally contains no website, renderer, visualization, audio, streaming
-protocol, retrieval pipeline, database, caching layer, or deployment configuration. The future visual demo
-consumes `analyzeWord` and interprets the raw distributions artistically; nothing about rendering leaks back
-into these types.
+The reusable core remains free of browser and framework dependencies. The website is a thin consumer around
+its public functions and types; rendering concerns do not leak into the core contract. The project still has
+no accounts, database, cache, streaming protocol, retrieval pipeline, or deployment configuration.
