@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["es2023"],
+    "types": ["@cloudflare/workers-types"],
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "rewriteRelativeImportExtensions": false
+  },
+  "include": ["**/*.ts", "../src/**/*.ts", "../server/handler.ts", "../server/types.ts"]
+}

@@ -22,11 +22,16 @@ import type {
 } from "./types.ts";
 import { validateAnswer } from "./validate.ts";
 
-/** Monotonic clock, immune to wall-clock adjustments during a request. */
-const now = (): bigint => process.hrtime.bigint();
+/**
+ * Monotonic clock, immune to wall-clock adjustments during a request.
+ *
+ * `performance.now()` rather than `process.hrtime.bigint()` so this module stays free of Node
+ * builtins and runs unchanged on a worker runtime; both are monotonic.
+ */
+const now = (): number => performance.now();
 
 /** Fractional milliseconds elapsed since `start`. Not rounded. */
-const elapsedMs = (start: bigint): number => Number(now() - start) / 1e6;
+const elapsedMs = (start: number): number => now() - start;
 
 /** A pre-aborted signal, so `analyzeWord` can report cancellation without starting any request. */
 const cancelledBeforeLaunch = () =>

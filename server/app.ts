@@ -3,27 +3,25 @@ import { extname, join, normalize, resolve, sep } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
-  analyzeFacet as coreAnalyzeFacet,
-  analyzeWord as coreAnalyzeWord,
-  ConfigurationError,
-  InputValidationError,
-  isFacet,
-  normalizeInput,
-} from "../src/index.ts";
-import type { AnalysisResult, AnalyzeOptions, Facet, FacetResult } from "../src/types.ts";
-import type { AnalyzeFacetResponse, ApiErrorCode, ApiErrorResponse } from "./types.ts";
+  BODY_LIMIT_BYTES,
+  defaultCore,
+  handleAnalyzeRequest,
+  JSON_TYPE,
+  PayloadTooLargeError,
+  type ApiResult,
+  type ApiRoute,
+  type CoreAdapter,
+} from "./handler.ts";
+import type { ApiErrorCode, ApiErrorResponse } from "./types.ts";
 
-const JSON_TYPE = "application/json; charset=utf-8";
-const BODY_LIMIT_BYTES = 4 * 1024;
+export { PayloadTooLargeError } from "./handler.ts";
+export type { CoreAdapter } from "./handler.ts";
 
-export interface CoreAdapter {
-  analyzeWord(input: string, options?: AnalyzeOptions): Promise<AnalysisResult>;
-  analyzeFacet<F extends Facet>(
-    facet: F,
-    input: string,
-    options?: AnalyzeOptions,
-  ): Promise<FacetResult<F>>;
-}
+/** The routes `handler.ts` serves, keyed by the path this server listens on. */
+const API_ROUTES: Record<string, ApiRoute> = {
+  "/api/analyze": "analyze",
+  "/api/analyze-facet": "analyze-facet",
+};
 
 export interface AppOptions {
   readonly core?: CoreAdapter;
@@ -40,10 +38,7 @@ interface RateBucket {
 }
 
 export const createRequestHandler = (options: AppOptions = {}) => {
-  const core: CoreAdapter = options.core ?? {
-    analyzeWord: coreAnalyzeWord,
-    analyzeFacet: coreAnalyzeFacet,
-  };
+  const core: CoreAdapter = options.core ?? defaultCore;
   const publicDir = resolve(options.publicDir ?? "web/dist");
   const rateLimitPerMinute = options.rateLimitPerMinute ?? 30;
   const maxConcurrent = options.maxConcurrent ?? 4;
@@ -56,7 +51,8 @@ export const createRequestHandler = (options: AppOptions = {}) => {
     setSecurityHeaders(response);
 
     const url = new URL(request.url ?? "/", "http://wordfeel.local");
-    if (url.pathname === "/api/analyze" || url.pathname === "/api/analyze-facet") {
+    const route = API_ROUTES[url.pathname];
+    if (route) {
       if (request.method !== "POST") {
         response.setHeader("Allow", "POST");
         return sendError(response, 405, "invalid_request", "This endpoint accepts POST requests only.");
@@ -75,7 +71,7 @@ export const createRequestHandler = (options: AppOptions = {}) => {
 
       active += 1;
       try {
-        await handleApiRequest(request, response, url.pathname, core);
+        await handleApiRequest(request, response, route, core);
       } finally {
         active -= 1;
       }
@@ -92,67 +88,36 @@ export const createRequestHandler = (options: AppOptions = {}) => {
   };
 };
 
+/**
+ * Adapt one Node request onto the runtime-agnostic handler.
+ *
+ * The abort controller bridges a dropped socket to the core's `AbortSignal`, so a visitor who
+ * closes the tab stops four Jev requests rather than paying for them.
+ */
 const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
-  pathname: string,
+  route: ApiRoute,
   core: CoreAdapter,
 ): Promise<void> => {
+  const controller = new AbortController();
+  const abort = () => {
+    if (!response.writableEnded) controller.abort();
+  };
+  request.once("aborted", abort);
+  response.once("close", abort);
+
+  let result: ApiResult;
   try {
-    const body = await readJsonBody(request);
-    if (!isRecord(body) || typeof body.input !== "string") {
-      return sendError(response, 400, "invalid_request", "Provide an input string.");
-    }
-
-    const controller = new AbortController();
-    const abort = () => {
-      if (!response.writableEnded) controller.abort();
-    };
-    request.once("aborted", abort);
-    response.once("close", abort);
-
-    try {
-      if (pathname === "/api/analyze") {
-        const result = await core.analyzeWord(body.input, { signal: controller.signal });
-        return sendJson(response, 200, result);
-      }
-
-      if (!isFacet(body.facet)) {
-        return sendError(response, 400, "invalid_request", "Provide a valid facet.");
-      }
-      const normalized = normalizeInput(body.input);
-      const result = await core.analyzeFacet(body.facet, body.input, { signal: controller.signal });
-      const envelope: AnalyzeFacetResponse = {
-        input: body.input,
-        normalized_input: normalized,
-        facet: body.facet,
-        result,
-      };
-      return sendJson(response, 200, envelope);
-    } finally {
-      request.off("aborted", abort);
-      response.off("close", abort);
-    }
-  } catch (error) {
-    if (error instanceof PayloadTooLargeError) {
-      return sendError(response, 413, "payload_too_large", "The request body is too large.");
-    }
-    if (error instanceof SyntaxError || error instanceof InputValidationError) {
-      return sendError(response, 400, "invalid_request", safeMessage(error));
-    }
-    if (error instanceof ConfigurationError) {
-      return sendError(
-        response,
-        503,
-        "not_configured",
-        "The service is not configured. Please contact the site owner.",
-      );
-    }
-    return sendError(response, 500, "internal_error", "The request could not be completed.");
+    result = await handleAnalyzeRequest(route, () => readJsonBody(request), core, {
+      signal: controller.signal,
+    });
+  } finally {
+    request.off("aborted", abort);
+    response.off("close", abort);
   }
+  sendJson(response, result.status, result.body);
 };
-
-class PayloadTooLargeError extends Error {}
 
 const readJsonBody = async (request: IncomingMessage): Promise<unknown> => {
   const chunks: Buffer[] = [];
@@ -272,9 +237,3 @@ const sendError = (
   code: ApiErrorCode,
   message: string,
 ): void => sendJson(response, status, { error: { code, message } } satisfies ApiErrorResponse);
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const safeMessage = (error: SyntaxError | InputValidationError): string =>
-  error instanceof InputValidationError ? error.message : "The request body is not valid JSON.";

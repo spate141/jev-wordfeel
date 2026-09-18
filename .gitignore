@@ -225,3 +225,16 @@ dist/
 *.tsbuildinfo
 test-results/
 playwright-report/
+
+# Editors
+.idea/
+
+# Internal build specifications, kept local
+*_HANDOFF.md
+
+# Playwright
+test-results/
+playwright-report/
+
+# Wrangler / Cloudflare Pages local state
+.wrangler/

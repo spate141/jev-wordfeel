@@ -31,7 +31,9 @@ export interface ResolvedConfig {
   readonly fetch: AnalyzeOptions["fetch"];
 }
 
-const readEnv = (name: string): string | undefined => process.env[name]?.trim() || undefined;
+/** Read one trimmed environment value. Returns `undefined` off Node, where there is no `process`. */
+const readEnv = (name: string): string | undefined =>
+  typeof process === "undefined" || !process.env ? undefined : process.env[name]?.trim() || undefined;
 
 /**
  * Resolve configuration from explicit options, then the environment, then defaults.

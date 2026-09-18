@@ -1,0 +1,11 @@
+# Applied by Cloudflare Pages to asset responses. The API routes set their own headers in
+# functions/_lib.ts, matching the first three of these.
+#
+# The policy is deliberately tight: the page loads only its own bundle, stylesheet and fonts, and
+# talks only to its own origin (/api/analyze). 'unsafe-inline' is needed for style-src alone,
+# because specimen geometry is set through React inline style attributes; no inline script exists.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
