@@ -8,6 +8,14 @@
   "name": "wordfeel",
   "main": "worker/index.ts",
   "compatibility_date": "2025-09-01",
+  // Cloudflare creates the DNS record and manages the certificate for this hostname on deploy.
+  // One level under snehal.ai, so the zone's existing free wildcard certificate covers it.
+  "routes": [
+    {
+      "pattern": "wordfeel.snehal.ai",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": "web/dist",
     "binding": "ASSETS",
