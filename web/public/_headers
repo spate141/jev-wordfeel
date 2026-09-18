@@ -1,9 +1,15 @@
-# Applied by Cloudflare Pages to asset responses. The API routes set their own headers in
-# functions/_lib.ts, matching the first three of these.
+# Security headers for asset responses. The API routes set their own in worker/api.ts.
 #
-# The policy is deliberately tight: the page loads only its own bundle, stylesheet and fonts, and
-# talks only to its own origin (/api/analyze). 'unsafe-inline' is needed for style-src alone,
-# because specimen geometry is set through React inline style attributes; no inline script exists.
+# NOTE: the snehal.ai zone has a response-header Transform Rule that sets its own CSP and
+# X-Frame-Options for every hostname in the zone, and a zone rule runs after this file — so in
+# production these values are REPLACED, not merged. Verify with:
+#   curl -sD - -o /dev/null https://wordfeel.snehal.ai/ | grep -i content-security-policy
+# This file is kept because it is the policy Wordfeel actually needs (strictly narrower than the
+# zone's: no third-party script origins, no 'unsafe-inline' scripts, framing denied outright), and
+# it takes effect the moment wordfeel.snehal.ai is excluded from that rule, or on any other host.
+#
+# 'unsafe-inline' is needed for style-src alone, because specimen geometry is set through React
+# inline style attributes. No inline script exists in the build.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

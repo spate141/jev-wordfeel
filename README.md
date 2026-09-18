@@ -1,4 +1,6 @@
-# wordfeel
+<p align="center">
+  <img src="logo.png" alt="wordfeel" width="480">
+</p>
 
 Turn any word into probability distributions over taste, material, scent, and shape. Powered by Jev.
 
@@ -85,8 +87,13 @@ The API logic itself lives once, in `server/handler.ts`, free of Node builtins. 
 adapts it to Node for `npm run dev`; `worker/api.ts` adapts it to the Workers runtime for
 production. Local and deployed behavior cannot drift apart.
 
+The API is rate limited to 20 requests per minute per IP through a Cloudflare rate-limiting
+binding, checked before any model request — one API call is four Jev calls upstream, so the limit
+protects the provider quota rather than the Worker. Over the limit returns `429 rate_limit`, which
+the UI renders as a retryable message. Page loads are unaffected; assets never reach the Worker.
+
 `npm run dev:worker` runs the real Workers runtime locally. See [`docs/deploy.md`](docs/deploy.md)
-for build settings, the secret, the custom domain, and the edge rate-limiting rule.
+for build settings, the secret, the custom domain, and rate limiting.
 
 ### The TypeSafe skill
 

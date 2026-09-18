@@ -25,6 +25,8 @@ import type { AnalyzeOptions } from "../src/types.ts";
 export interface Env {
   /** The static site in `web/dist`, bound so the Worker can fall back to it. */
   readonly ASSETS: Fetcher;
+  /** Cloudflare's per-key rate limiter; see the `ratelimits` block in `wrangler.jsonc`. */
+  readonly ANALYZE_LIMITER?: RateLimit;
   readonly TYPESAFE_API_KEY?: string;
   readonly TYPESAFE_MODEL?: string;
 }
@@ -51,6 +53,13 @@ export const respondToAnalyze = async (
     );
   }
 
+  if (await isRateLimited(request, env)) {
+    return toResponse(
+      errorResult(429, "rate_limit", "Too many requests. Please wait and try again."),
+      { "Retry-After": "60" },
+    );
+  }
+
   const result = await handleAnalyzeRequest(
     route,
     () => readJsonBody(request),
@@ -58,6 +67,23 @@ export const respondToAnalyze = async (
     analyzeOptions(request, env),
   );
   return toResponse(result);
+};
+
+/**
+ * Ask Cloudflare's rate limiter whether this client may proceed.
+ *
+ * Keyed on the connecting IP, which only Cloudflare sets and a client cannot forge (unlike
+ * `X-Forwarded-For`). One analysis costs four Jev requests upstream, so this is what keeps a single
+ * actor from draining the provider quota for everyone else.
+ *
+ * The limiter is optional in the type so a deployment without the binding still serves traffic; a
+ * request is allowed through when it is absent rather than failing shut on a configuration gap.
+ */
+const isRateLimited = async (request: Request, env: Env): Promise<boolean> => {
+  if (!env.ANALYZE_LIMITER) return false;
+  const key = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const { success } = await env.ANALYZE_LIMITER.limit({ key });
+  return !success;
 };
 
 /**
