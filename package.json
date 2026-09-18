@@ -31,14 +31,14 @@
     "test:e2e": "playwright test --config web/playwright.config.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:web": "tsc -p web/tsconfig.json --noEmit",
-    "typecheck:functions": "tsc -p functions/tsconfig.json --noEmit",
+    "typecheck:worker": "tsc -p worker/tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "build:web": "vite build --config web/vite.config.ts",
     "build:app": "npm run build && npm run build:web",
     "dev": "node --watch --env-file-if-exists=.env server/index.ts",
-    "dev:pages": "npm run build:web && wrangler pages dev web/dist",
+    "dev:worker": "npm run build:web && wrangler dev",
     "start": "node --env-file-if-exists=.env server/index.ts --production",
-    "verify": "npm test && npm run test:ui && npm run typecheck && npm run typecheck:web && npm run typecheck:functions && npm run build:app"
+    "verify": "npm test && npm run test:ui && npm run typecheck && npm run typecheck:web && npm run typecheck:worker && npm run build:app"
   },
   "dependencies": {
     "@fontsource/instrument-serif": "^5.2.8",

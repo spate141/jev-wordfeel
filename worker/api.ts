@@ -1,12 +1,12 @@
 /**
- * The Cloudflare Pages Functions adapter.
+ * The Workers runtime adapter.
  *
- * Both API routes are the same request shape, so they share one adapter over `server/handler.ts`.
- * This file is the only Workers-specific code in the project: it turns a Web `Request` into the
- * handler's arguments and its `ApiResult` back into a `Response`. All validation, routing, and error
- * mapping stay in the shared handler, so this deployment and `npm start` answer identically.
+ * Both API routes are the same request shape, so they share one adapter over `server/handler.ts`:
+ * it turns a Web `Request` into the handler's arguments and its `ApiResult` back into a `Response`.
+ * All validation, routing, and error mapping stay in the shared handler, so this deployment and
+ * `npm start` answer identically.
  *
- * There is no environment to read on this runtime, so the API key is passed in from the Pages
+ * There is no environment to read on this runtime, so the API key is passed in from the Worker
  * secret explicitly. It exists only here, server-side; nothing in `web/` ever sees it.
  */
 
@@ -21,8 +21,10 @@ import {
 } from "../server/handler.ts";
 import type { AnalyzeOptions } from "../src/types.ts";
 
-/** Bindings this deployment expects. `TYPESAFE_API_KEY` is a Pages secret, never a plain variable. */
+/** Bindings this deployment expects. `TYPESAFE_API_KEY` is a Worker secret, never a plain variable. */
 export interface Env {
+  /** The static site in `web/dist`, bound so the Worker can fall back to it. */
+  readonly ASSETS: Fetcher;
   readonly TYPESAFE_API_KEY?: string;
   readonly TYPESAFE_MODEL?: string;
 }

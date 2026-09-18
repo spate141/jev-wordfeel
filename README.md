@@ -75,17 +75,18 @@ the displayed result as a self-contained light-theme SVG postcard without making
 
 ### Deploy
 
-The live site is [wordfeel.snehal.ai](https://wordfeel.snehal.ai), on Cloudflare Pages. The static cabinet is
-served from `web/dist`; the two API routes run as Pages Functions (`functions/api/`) so the Jev key stays
-server-side. Both halves share one origin, so the browser calls relative `/api` paths and no CORS
-configuration exists.
+The live site is [wordfeel.snehal.ai](https://wordfeel.snehal.ai), a Cloudflare Worker with static
+assets. The cabinet is served from `web/dist` by the assets layer; the two API routes run in the
+Worker (`worker/`) so the Jev key stays server-side. Both halves share one origin, so the browser
+calls relative `/api` paths and no CORS configuration exists. Only `/api/*` invokes the Worker, so
+page loads cost no invocation.
 
-The API logic itself lives once, in `server/handler.ts`, free of Node builtins. `server/app.ts` adapts it to
-Node for `npm run dev`; `functions/_lib.ts` adapts it to the Workers runtime for production. Local and
-deployed behavior cannot drift apart.
+The API logic itself lives once, in `server/handler.ts`, free of Node builtins. `server/app.ts`
+adapts it to Node for `npm run dev`; `worker/api.ts` adapts it to the Workers runtime for
+production. Local and deployed behavior cannot drift apart.
 
-`npm run dev:pages` runs the real Workers runtime locally. See [`docs/deploy.md`](docs/deploy.md) for project
-settings, the secret, the custom domain, and the edge rate-limiting rule.
+`npm run dev:worker` runs the real Workers runtime locally. See [`docs/deploy.md`](docs/deploy.md)
+for build settings, the secret, the custom domain, and the edge rate-limiting rule.
 
 ### The TypeSafe skill
 
@@ -260,7 +261,7 @@ npm run build        # emit dist/ for publishing
 npm run test:ui      # Vitest + Testing Library
 npm run test:e2e     # Playwright viewport/accessibility checks
 npm run verify       # core + UI tests, type checks, and both builds
-npm run dev:pages    # the deployed runtime, locally (Cloudflare Workers)
+npm run dev:worker   # the deployed runtime, locally (Cloudflare Workers)
 ```
 
 The test suite is deterministic and makes no network calls. It drives the real client over a fake `fetch`
@@ -286,5 +287,5 @@ the prompts and taxonomies are not tuned toward any example word.
 The reusable core remains free of browser and framework dependencies. The website is a thin consumer around
 its public functions and types; rendering concerns do not leak into the core contract. The project still has
 no accounts, database, cache, streaming protocol, or retrieval pipeline. Deployment is a thin outer layer:
-the Cloudflare Pages configuration and a second adapter around the same request handler, adding nothing the
+the Cloudflare Worker configuration and a second adapter around the same request handler, adding nothing the
 core has to know about.

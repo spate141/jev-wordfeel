@@ -1,11 +1,23 @@
 {
-  // Cloudflare Pages build contract, kept in version control rather than only in the dashboard.
-  // See docs/deploy.md.
+  // Cloudflare Worker with static assets, kept in version control rather than only in the
+  // dashboard. See docs/deploy.md.
   //
-  // There are no vars and no compatibility_flags here on purpose: TYPESAFE_API_KEY is a Pages
+  // There are no vars and no compatibility_flags here on purpose: TYPESAFE_API_KEY is a Worker
   // secret (never committed), and neither the core nor the TypeSafe SDK touches a Node builtin,
   // so nodejs_compat is not needed.
   "name": "wordfeel",
+  "main": "worker/index.ts",
   "compatibility_date": "2025-09-01",
-  "pages_build_output_dir": "web/dist"
+  "assets": {
+    "directory": "web/dist",
+    "binding": "ASSETS",
+    // An unknown path returns the app rather than a 404; the cabinet is a single page.
+    "not_found_handling": "single-page-application",
+    // Only the API reaches the Worker. Page loads are served by the assets layer directly, so they
+    // cost no Worker invocation and cannot be delayed by it.
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true
+  }
 }
