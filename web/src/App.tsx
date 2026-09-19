@@ -26,7 +26,7 @@ export function App() {
         </a>
         <nav aria-label="Site links">
           <button className="header-link" type="button" onClick={() => setAboutOpen((open) => !open)} aria-expanded={aboutOpen}>About</button>
-          <a className="header-link" href="https://github.com/spate141/wordfeel" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+          <a className="header-link" href="https://github.com/spate141/jev-wordfeel" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </nav>
       </header>
 
