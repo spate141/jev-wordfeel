@@ -62,7 +62,7 @@ export function App() {
               <h2>{analysis.result ? `“${analysis.result.normalized_input}”` : "Four empty plinths"}</h2>
             </div>
             {analysis.result && analysis.result.status !== "error" && (
-              <button className="save-button" type="button" onClick={() => postcardRef.current && downloadPostcard(postcardRef.current, analysis.result!.normalized_input)}>
+              <button className="save-button" type="button" onClick={() => { if (postcardRef.current) void downloadPostcard(postcardRef.current, analysis.result!.normalized_input); }}>
                 Save image <span aria-hidden="true">↓</span>
               </button>
             )}

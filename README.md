@@ -73,7 +73,9 @@ restart. Configure them with `WORDFEEL_RATE_LIMIT_PER_MINUTE` and `WORDFEEL_MAX_
 
 The four illustrations are inline SVG and support every v1 taxonomy label. Exact values remain available in
 each panel's profile, while animation respects the browser's reduced-motion preference. **Save image** exports
-the displayed result as a self-contained light-theme SVG postcard without making another model request.
+the displayed result as a light-theme PNG postcard without making another model request: a wide four-across
+sheet on desktop, a 2x2 portrait sheet on narrow screens. It falls back to SVG where canvas export is
+unavailable.
 
 ### Deploy
 

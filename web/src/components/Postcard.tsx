@@ -106,13 +106,54 @@ const Ribbon = ({ profile }: { readonly profile: ReturnType<typeof toVisualProfi
   })}</g>;
 };
 
-export const downloadPostcard = (svg: SVGSVGElement, word: string): void => {
-  const source = new XMLSerializer().serializeToString(svg);
-  const blob = new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n${source}`], { type: "image/svg+xml;charset=utf-8" });
+/** Raster scale: phones hand a PNG to the photo library, and 2x keeps the text crisp there. */
+const EXPORT_SCALE = 2;
+
+export const downloadPostcard = async (svg: SVGSVGElement, word: string): Promise<void> => {
+  const source = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+  const png = await rasterize(source, svg.viewBox.baseVal.width, svg.viewBox.baseVal.height);
+  if (png) {
+    saveBlob(png, `wordfeel-${safeFilename(word)}.png`);
+    return;
+  }
+  // Canvas is unavailable or refused the drawing, so the vector file is still worth handing over.
+  saveBlob(new Blob([source], { type: "image/svg+xml;charset=utf-8" }), `wordfeel-${safeFilename(word)}.svg`);
+};
+
+/** A decode that neither resolves nor fails would leave the button dead, so the wait is bounded. */
+const DECODE_TIMEOUT_MS = 8000;
+
+const rasterize = async (source: string, width: number, height: number): Promise<Blob | null> => {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = width * EXPORT_SCALE;
+    canvas.height = height * EXPORT_SCALE;
+    const context = canvas.getContext("2d");
+    if (!context || typeof canvas.toBlob !== "function") return null;
+    // A data URL keeps the canvas untainted, and encodeURIComponent survives non-ASCII words.
+    const image = new Image();
+    image.width = width;
+    image.height = height;
+    const decoded = await new Promise<boolean>((resolve) => {
+      const finish = (ok: boolean) => { window.clearTimeout(timer); resolve(ok); };
+      const timer = window.setTimeout(() => finish(false), DECODE_TIMEOUT_MS);
+      image.addEventListener("load", () => finish(true), { once: true });
+      image.addEventListener("error", () => finish(false), { once: true });
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
+    });
+    if (!decoded) return null;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  } catch {
+    return null;
+  }
+};
+
+const saveBlob = (blob: Blob, filename: string): void => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `wordfeel-${safeFilename(word)}.svg`;
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
