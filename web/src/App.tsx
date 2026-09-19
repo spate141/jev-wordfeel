@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { FACETS, type Facet } from "../../src/taxonomies.ts";
 import type { FacetFailure, FacetSuccess } from "../../src/types.ts";
 import { wordfeelIconUrl } from "./assets.ts";
-import { Postcard, downloadPostcard } from "./components/Postcard.tsx";
+import { Postcard, downloadPostcard, usePostcardLayout } from "./components/Postcard.tsx";
 import { SensePanel } from "./components/SensePanel.tsx";
 import { SiteCredit } from "./components/SiteCredit.tsx";
 import { UnderTheHood } from "./components/UnderTheHood.tsx";
@@ -13,6 +13,7 @@ import { useWordAnalysis } from "./useWordAnalysis.ts";
 export function App() {
   const analysis = useWordAnalysis();
   const postcardRef = useRef<SVGSVGElement>(null);
+  const postcardLayout = usePostcardLayout();
   const [aboutOpen, setAboutOpen] = useState(false);
   const allMysterious = analysis.result?.status === "ok"
     && FACETS.every((facet) => analysis.result?.facets[facet].status === "ok" && analysis.result.facets[facet].choice === "no_association");
@@ -81,7 +82,7 @@ export function App() {
 
           {allMysterious && <p className="mystery-note">This one is a little mysterious. Try another word.</p>}
           {analysis.result && <UnderTheHood result={analysis.result} />}
-          {analysis.result && <Postcard ref={postcardRef} result={analysis.result} />}
+          {analysis.result && <Postcard ref={postcardRef} result={analysis.result} layout={postcardLayout} />}
         </section>
       </main>
 
